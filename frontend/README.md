@@ -1,5 +1,7 @@
 # MyApp Frontend
 
+> 변경 주기
+
 React 기반 프론트엔드 애플리케이션
 
 ## 기술 스택
