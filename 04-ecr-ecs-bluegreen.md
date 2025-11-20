@@ -46,18 +46,6 @@ docker push <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:v1.0.0
   "rules": [
     {
       "rulePriority": 1,
-      "description": "Keep last 10 images",
-      "selection": {
-        "tagStatus": "any",
-        "countType": "imageCountMoreThan",
-        "countNumber": 10
-      },
-      "action": {
-        "type": "expire"
-      }
-    },
-    {
-      "rulePriority": 2,
       "description": "Remove untagged images older than 7 days",
       "selection": {
         "tagStatus": "untagged",
@@ -68,10 +56,24 @@ docker push <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:v1.0.0
       "action": {
         "type": "expire"
       }
+    },
+    {
+      "rulePriority": 2,
+      "description": "Keep last 10 images",
+      "selection": {
+        "tagStatus": "any",
+        "countType": "imageCountMoreThan",
+        "countNumber": 10
+      },
+      "action": {
+        "type": "expire"
+      }
     }
   ]
 }
 ```
+
+**주의:** `tagStatus=any` 규칙은 항상 가장 낮은 priority (높은 숫자)를 가져야 합니다.
 
 ---
 

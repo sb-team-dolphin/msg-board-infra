@@ -248,6 +248,59 @@ terraform apply -target=module.ecs
 terraform refresh
 ```
 
+### ECR Lifecycle Policy 에러
+
+**증상:**
+```
+InvalidParameterException: Lifecycle policy validation failure: Rule for tagStatus=ANY must have the lowest priority per storage class
+```
+
+**원인:**
+`tagStatus=any` 규칙이 가장 높은 priority (낮은 숫자)에 있음
+
+**해결:**
+```hcl
+# tagStatus=any 규칙은 항상 가장 낮은 priority (높은 숫자)를 가져야 함
+rules = [
+  {
+    rulePriority = 1  # untagged 먼저
+    tagStatus    = "untagged"
+    ...
+  },
+  {
+    rulePriority = 2  # any는 마지막
+    tagStatus    = "any"
+    ...
+  }
+]
+```
+
+### deployment_configuration 블록 에러
+
+**증상:**
+```
+Error: Blocks of type "deployment_configuration" are not expected here
+```
+
+**원인:**
+`deployment_circuit_breaker`가 `deployment_configuration` 외부에 있거나 구문 오류
+
+**해결:**
+간단한 ECS Service 설정에서는 deployment_configuration을 제거하고 기본값 사용:
+```hcl
+resource "aws_ecs_service" "app" {
+  name            = "my-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = 2
+  launch_type     = "FARGATE"
+
+  network_configuration { ... }
+  load_balancer { ... }
+  # deployment_configuration 생략 시 기본값 사용
+}
+```
+
 ---
 
 ## GitHub Actions 문제

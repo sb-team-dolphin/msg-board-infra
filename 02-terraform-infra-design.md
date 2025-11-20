@@ -107,7 +107,7 @@ Launch Type: Fargate (서버리스)
 CPU: 256, 512, 1024, 2048 (선택)
 Memory: 512MB, 1GB, 2GB, 4GB (선택)
 Desired Count: 2 (최소 가용성)
-Deployment Type: Blue/Green
+Deployment Type: Rolling Update (기본)
 ```
 
 ---
@@ -207,13 +207,14 @@ terraform {
   }
 
   # Terraform State를 S3에 저장 (팀 협업 시)
-  backend "s3" {
-    bucket         = "my-terraform-state-bucket"
-    key            = "prod/terraform.tfstate"
-    region         = "ap-northeast-2"
-    encrypt        = true
-    dynamodb_table = "terraform-lock"
-  }
+  # 초기 테스트는 로컬 State 사용 (아래 backend 블록 주석 처리)
+  # backend "s3" {
+  #   bucket         = "my-terraform-state-bucket"
+  #   key            = "prod/terraform.tfstate"
+  #   region         = "ap-northeast-2"
+  #   encrypt        = true
+  #   dynamodb_table = "terraform-lock"
+  # }
 }
 
 provider "aws" {
@@ -415,10 +416,6 @@ resource "aws_ecs_service" "app" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
-  deployment_controller {
-    type = "CODE_DEPLOY"  # Blue/Green 배포
-  }
-
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_security_group_id]
@@ -568,6 +565,19 @@ resource "aws_ecr_lifecycle_policy" "app" {
     rules = [
       {
         rulePriority = 1
+        description  = "Remove untagged images older than 7 days"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 7
+        }
+        action = {
+          type = "expire"
+        }
+      },
+      {
+        rulePriority = 2
         description  = "Keep last 10 images"
         selection = {
           tagStatus     = "any"
