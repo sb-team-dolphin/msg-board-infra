@@ -41,6 +41,48 @@ module "alb" {
   frontend_port      = var.frontend_container_port
 }
 
+# ECS Security Group (공유용 - 순환 의존성 해결)
+resource "aws_security_group" "ecs_tasks" {
+  name        = "${var.project_name}-ecs-tasks-sg"
+  description = "Security group for ECS tasks"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [module.alb.alb_security_group_id]
+    description     = "Allow traffic from ALB"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name = "${var.project_name}-ecs-tasks-sg"
+  }
+}
+
+# RDS Module
+module "rds" {
+  source = "./modules/rds"
+
+  project_name          = var.project_name
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  ecs_security_group_id = aws_security_group.ecs_tasks.id
+  db_name               = var.db_name
+  db_username           = var.db_username
+  db_instance_class     = var.db_instance_class
+  db_allocated_storage  = var.db_allocated_storage
+  multi_az              = var.db_multi_az
+}
+
 # ECS Module
 module "ecs" {
   source = "./modules/ecs"
@@ -61,7 +103,7 @@ module "ecs" {
   # ALB
   backend_target_group_arn  = module.alb.backend_target_group_arn
   frontend_target_group_arn = module.alb.frontend_target_group_arn
-  alb_security_group_id     = module.alb.alb_security_group_id
+  ecs_security_group_id     = aws_security_group.ecs_tasks.id
 
   # ECS Configuration
   backend_cpu               = var.ecs_backend_cpu
@@ -81,7 +123,14 @@ module "ecs" {
   cpu_target_value          = var.cpu_target_value
   memory_target_value       = var.memory_target_value
 
-  depends_on = [module.alb]
+  # RDS Configuration
+  db_host       = module.rds.db_address
+  db_port       = module.rds.db_port
+  db_name       = module.rds.db_name
+  db_username   = module.rds.db_username
+  db_secret_arn = module.rds.db_secret_arn
+
+  depends_on = [module.alb, module.rds]
 }
 
 # CloudWatch Log Groups

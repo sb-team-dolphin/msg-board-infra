@@ -12,34 +12,6 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
-# Security Group for ECS Tasks
-resource "aws_security_group" "ecs_tasks" {
-  name        = "${var.project_name}-ecs-tasks-sg"
-  description = "Security group for ECS tasks"
-  vpc_id      = var.vpc_id
-
-  # Allow traffic from ALB
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [var.alb_security_group_id]
-    description     = "Allow traffic from ALB"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = {
-    Name = "${var.project_name}-ecs-tasks-sg"
-  }
-}
-
 # Backend Task Definition
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.project_name}-backend-task"
@@ -67,6 +39,29 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "SPRING_PROFILES_ACTIVE"
           value = "prod"
+        },
+        {
+          name  = "DB_HOST"
+          value = var.db_host
+        },
+        {
+          name  = "DB_PORT"
+          value = tostring(var.db_port)
+        },
+        {
+          name  = "DB_NAME"
+          value = var.db_name
+        },
+        {
+          name  = "DB_USERNAME"
+          value = var.db_username
+        }
+      ]
+
+      secrets = [
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = "${var.db_secret_arn}:password::"
         }
       ]
 
@@ -158,7 +153,7 @@ resource "aws_ecs_service" "backend" {
 
   network_configuration {
     subnets          = var.private_subnet_ids
-    security_groups  = [aws_security_group.ecs_tasks.id]
+    security_groups  = [var.ecs_security_group_id]
     assign_public_ip = false
   }
 
@@ -185,7 +180,7 @@ resource "aws_ecs_service" "frontend" {
 
   network_configuration {
     subnets          = var.private_subnet_ids
-    security_groups  = [aws_security_group.ecs_tasks.id]
+    security_groups  = [var.ecs_security_group_id]
     assign_public_ip = false
   }
 

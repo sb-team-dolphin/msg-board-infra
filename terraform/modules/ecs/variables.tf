@@ -48,8 +48,8 @@ variable "frontend_target_group_arn" {
   type        = string
 }
 
-variable "alb_security_group_id" {
-  description = "ALB Security Group ID"
+variable "ecs_security_group_id" {
+  description = "ECS Tasks Security Group ID"
   type        = string
 }
 
@@ -121,4 +121,35 @@ variable "cpu_target_value" {
 variable "memory_target_value" {
   description = "Memory target value for autoscaling"
   type        = number
+}
+
+# RDS Configuration
+variable "db_host" {
+  description = "RDS hostname"
+  type        = string
+  default     = ""
+}
+
+variable "db_port" {
+  description = "RDS port"
+  type        = number
+  default     = 3306
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = ""
+}
+
+variable "db_username" {
+  description = "Database username"
+  type        = string
+  default     = ""
+}
+
+variable "db_secret_arn" {
+  description = "Secrets Manager ARN for DB password"
+  type        = string
+  default     = ""
 }

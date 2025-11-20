@@ -53,7 +53,3 @@ output "frontend_task_definition_arn" {
   value       = aws_ecs_task_definition.frontend.arn
 }
 
-output "ecs_security_group_id" {
-  description = "ECS Tasks Security Group ID"
-  value       = aws_security_group.ecs_tasks.id
-}
