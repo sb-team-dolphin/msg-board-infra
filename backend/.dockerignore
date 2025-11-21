@@ -1,6 +1,0 @@
-target/
-!target/*.jar
-*.md
-.git
-.gitignore
-.mvn/wrapper/maven-wrapper.jar
