@@ -105,5 +105,29 @@ output "deployment_info" {
     cloudwatch_frontend_logs_cmd = "aws logs tail /ecs/${var.project_name}-frontend --follow"
     rds_endpoint                 = module.rds.db_endpoint
     rds_secret_arn               = module.rds.db_secret_arn
+    deployment_type              = "Blue/Green (CodeDeploy)"
+    codedeploy_backend_app       = module.codedeploy.backend_app_name
+    codedeploy_frontend_app      = module.codedeploy.frontend_app_name
   }
+}
+
+# CodeDeploy Outputs
+output "codedeploy_backend_app_name" {
+  description = "CodeDeploy Backend Application Name"
+  value       = module.codedeploy.backend_app_name
+}
+
+output "codedeploy_frontend_app_name" {
+  description = "CodeDeploy Frontend Application Name"
+  value       = module.codedeploy.frontend_app_name
+}
+
+output "codedeploy_backend_deployment_group" {
+  description = "CodeDeploy Backend Deployment Group Name"
+  value       = module.codedeploy.backend_deployment_group_name
+}
+
+output "codedeploy_frontend_deployment_group" {
+  description = "CodeDeploy Frontend Deployment Group Name"
+  value       = module.codedeploy.frontend_deployment_group_name
 }

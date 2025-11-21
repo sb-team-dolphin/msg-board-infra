@@ -51,7 +51,7 @@ resource "aws_lb" "main" {
   }
 }
 
-# Target Group for Backend
+# Target Group for Backend (Blue)
 resource "aws_lb_target_group" "backend" {
   name        = "${var.project_name}-backend-tg"
   port        = var.backend_port
@@ -77,7 +77,33 @@ resource "aws_lb_target_group" "backend" {
   }
 }
 
-# Target Group for Frontend
+# Target Group for Backend (Green) - for Blue/Green deployment
+resource "aws_lb_target_group" "backend_green" {
+  name        = "${var.project_name}-backend-tg-green"
+  port        = var.backend_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = "/health"
+    matcher             = "200"
+    protocol            = "HTTP"
+  }
+
+  deregistration_delay = 30
+
+  tags = {
+    Name = "${var.project_name}-backend-tg-green"
+  }
+}
+
+# Target Group for Frontend (Blue)
 resource "aws_lb_target_group" "frontend" {
   name        = "${var.project_name}-frontend-tg"
   port        = var.frontend_port
@@ -100,6 +126,32 @@ resource "aws_lb_target_group" "frontend" {
 
   tags = {
     Name = "${var.project_name}-frontend-tg"
+  }
+}
+
+# Target Group for Frontend (Green) - for Blue/Green deployment
+resource "aws_lb_target_group" "frontend_green" {
+  name        = "${var.project_name}-frontend-tg-green"
+  port        = var.frontend_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 3
+    interval            = 30
+    path                = "/health"
+    matcher             = "200"
+    protocol            = "HTTP"
+  }
+
+  deregistration_delay = 30
+
+  tags = {
+    Name = "${var.project_name}-frontend-tg-green"
   }
 }
 

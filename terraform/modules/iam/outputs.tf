@@ -17,3 +17,13 @@ output "ecs_task_role_name" {
   description = "ECS Task Role Name"
   value       = aws_iam_role.ecs_task_role.name
 }
+
+output "codedeploy_role_arn" {
+  description = "CodeDeploy Service Role ARN"
+  value       = aws_iam_role.codedeploy_role.arn
+}
+
+output "codedeploy_role_name" {
+  description = "CodeDeploy Service Role Name"
+  value       = aws_iam_role.codedeploy_role.name
+}

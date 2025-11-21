@@ -133,6 +133,30 @@ module "ecs" {
   depends_on = [module.alb, module.rds]
 }
 
+# CodeDeploy Module for Blue/Green Deployment
+module "codedeploy" {
+  source = "./modules/codedeploy"
+
+  project_name        = var.project_name
+  codedeploy_role_arn = module.iam.codedeploy_role_arn
+
+  # ECS
+  ecs_cluster_name      = module.ecs.cluster_name
+  backend_service_name  = module.ecs.backend_service_name
+  frontend_service_name = module.ecs.frontend_service_name
+
+  # ALB
+  http_listener_arn = module.alb.http_listener_arn
+
+  # Target Groups
+  backend_target_group_name        = module.alb.backend_target_group_name
+  backend_target_group_green_name  = module.alb.backend_target_group_green_name
+  frontend_target_group_name       = module.alb.frontend_target_group_name
+  frontend_target_group_green_name = module.alb.frontend_target_group_green_name
+
+  depends_on = [module.ecs]
+}
+
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "backend" {
   name              = "/ecs/${var.project_name}-backend"

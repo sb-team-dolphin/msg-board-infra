@@ -151,6 +151,10 @@ resource "aws_ecs_service" "backend" {
   desired_count   = var.backend_desired_count
   launch_type     = "FARGATE"
 
+  deployment_controller {
+    type = "CODE_DEPLOY"
+  }
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_security_group_id]
@@ -168,6 +172,10 @@ resource "aws_ecs_service" "backend" {
   }
 
   depends_on = [var.backend_target_group_arn]
+
+  lifecycle {
+    ignore_changes = [task_definition, load_balancer]
+  }
 }
 
 # Frontend ECS Service
@@ -177,6 +185,10 @@ resource "aws_ecs_service" "frontend" {
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = var.frontend_desired_count
   launch_type     = "FARGATE"
+
+  deployment_controller {
+    type = "CODE_DEPLOY"
+  }
 
   network_configuration {
     subnets          = var.private_subnet_ids
@@ -195,6 +207,10 @@ resource "aws_ecs_service" "frontend" {
   }
 
   depends_on = [var.frontend_target_group_arn]
+
+  lifecycle {
+    ignore_changes = [task_definition, load_balancer]
+  }
 }
 
 # Auto Scaling Target for Backend
