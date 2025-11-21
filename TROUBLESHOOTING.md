@@ -1,157 +1,89 @@
 # 트러블슈팅 가이드
 
-일반적인 문제와 해결 방법을 정리한 가이드입니다.
+Terraform 인프라 및 AWS 서비스 관련 일반적인 문제와 해결 방법을 정리한 가이드입니다.
 
 ## 목차
 
-1. [로컬 개발 문제](#로컬-개발-문제)
-2. [Docker 빌드 문제](#docker-빌드-문제)
-3. [Terraform 문제](#terraform-문제)
-4. [GitHub Actions 문제](#github-actions-문제)
-5. [AWS ECS 문제](#aws-ecs-문제)
-6. [네트워크 문제](#네트워크-문제)
-7. [성능 문제](#성능-문제)
+1. [Terraform 문제](#terraform-문제)
+2. [GitHub Actions 문제](#github-actions-문제)
+3. [AWS ECS 문제](#aws-ecs-문제)
+4. [CloudFront/S3 문제](#cloudfronts3-문제)
+5. [네트워크 문제](#네트워크-문제)
+6. [성능 문제](#성능-문제)
 
 ---
 
-## 로컬 개발 문제
+## CloudFront/S3 문제
 
-### 백엔드가 시작되지 않음
+### S3 버킷 정책 오류
 
 **증상:**
 ```
-Error: Could not find or load main class com.myapp.MyAppApplication
+Error: Error putting S3 policy: AccessDenied
 ```
 
 **해결:**
 ```bash
-# Maven 클린 빌드
-cd backend
-mvn clean install
-mvn spring-boot:run
+# 버킷 소유권 확인
+aws s3api get-bucket-ownership-controls --bucket <bucket-name>
 
-# JAR 파일 확인
-ls -la target/*.jar
+# 퍼블릭 액세스 블록 확인
+aws s3api get-public-access-block --bucket <bucket-name>
 ```
 
-### 프론트엔드가 시작되지 않음
+### CloudFront 403 Forbidden
 
 **증상:**
 ```
-Error: Cannot find module 'react'
+403 Forbidden - AccessDenied
+```
+
+**원인:**
+- OAC 설정 오류
+- S3 버킷 정책 누락
+
+**해결:**
+```bash
+# CloudFront OAC 확인
+aws cloudfront get-origin-access-control --id <oac-id>
+
+# S3 버킷 정책에 CloudFront 허용 확인
+aws s3api get-bucket-policy --bucket <bucket-name>
+```
+
+### CloudFront 캐시 무효화 실패
+
+**증상:**
+```
+InvalidationBatch contains multiple invalidation paths for same resource
 ```
 
 **해결:**
 ```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-npm start
+# 올바른 무효화 명령어
+aws cloudfront create-invalidation \
+  --distribution-id <distribution-id> \
+  --paths "/*"
 ```
 
-### CORS 에러
+### ACM 인증서 검증 실패
 
 **증상:**
 ```
-Access to XMLHttpRequest has been blocked by CORS policy
+Certificate is in status PENDING_VALIDATION
 ```
 
 **해결:**
+1. Route53에 DNS 검증 레코드가 생성되었는지 확인
+2. DNS 전파 대기 (최대 30분)
+3. 도메인 소유권 확인
 
-Backend `UserController.java`에 CORS 설정 확인:
-```java
-@CrossOrigin(origins = "*")  // 개발 환경
-```
-
-프로덕션에서는 특정 도메인만 허용:
-```java
-@CrossOrigin(origins = "https://myapp.com")
-```
-
-### 포트 충돌
-
-**증상:**
-```
-Port 8080 is already in use
-```
-
-**해결 (Windows):**
-```powershell
-# 포트 사용 중인 프로세스 확인
-netstat -ano | findstr :8080
-
-# 프로세스 종료
-taskkill /PID <PID> /F
-```
-
-**해결 (Linux/Mac):**
 ```bash
-# 포트 사용 중인 프로세스 확인
-lsof -ti:8080
-
-# 프로세스 종료
-kill -9 $(lsof -ti:8080)
+# 인증서 상태 확인
+aws acm describe-certificate \
+  --certificate-arn <cert-arn> \
+  --region us-east-1
 ```
-
----
-
-## Docker 빌드 문제
-
-### Docker 빌드 실패
-
-**증상:**
-```
-ERROR: failed to solve: process "/bin/sh -c mvn clean package" did not complete successfully
-```
-
-**해결:**
-```bash
-# Maven wrapper 권한 부여 (Linux/Mac)
-chmod +x mvnw
-
-# Docker 캐시 없이 빌드
-docker build --no-cache -t myapp-backend .
-
-# 빌드 로그 자세히 보기
-docker build --progress=plain -t myapp-backend .
-```
-
-### Docker 컨테이너가 즉시 종료됨
-
-**증상:**
-```bash
-docker ps  # 컨테이너가 보이지 않음
-docker ps -a  # Exited (1)
-```
-
-**해결:**
-```bash
-# 로그 확인
-docker logs <container-id>
-
-# 인터랙티브 모드로 실행
-docker run -it myapp-backend /bin/sh
-
-# Health check 확인
-docker inspect <container-id> | grep Health -A 20
-```
-
-### Health Check 실패
-
-**증상:**
-```
-Health check failed: wget: can't connect to remote host
-```
-
-**해결:**
-
-Dockerfile에서 Health Check 수정:
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
-```
-
-`startPeriod`를 늘려서 애플리케이션 시작 시간 확보
 
 ---
 
