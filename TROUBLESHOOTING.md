@@ -89,6 +89,55 @@ aws acm describe-certificate \
 
 ## Terraform 문제
 
+### Bootstrap S3 버킷 생성 실패
+
+**증상:**
+```
+BucketAlreadyExists: The requested bucket name is not available
+```
+
+**해결:**
+```bash
+# S3 버킷 이름은 전역적으로 고유해야 함
+# 프로젝트 이름을 더 구체적으로 변경
+./scripts/setup-terraform-backend.sh myapp-unique-123 ap-northeast-2
+```
+
+### State Lock 오류
+
+**증상:**
+```
+Error acquiring the state lock
+```
+
+**해결:**
+```bash
+# 1. 다른 terraform 프로세스가 실행 중인지 확인
+# 2. DynamoDB에서 수동으로 Lock 해제
+aws dynamodb delete-item \
+  --table-name myapp-terraform-lock \
+  --key '{"LockID": {"S": "myapp-terraform-state/backend/terraform.tfstate"}}'
+
+# 3. 또는 강제 잠금 해제
+terraform force-unlock <LOCK_ID>
+```
+
+### Backend 설정 후 Init 실패
+
+**증상:**
+```
+Error: Backend configuration changed
+```
+
+**해결:**
+```bash
+# 기존 state를 새 backend로 마이그레이션
+terraform init -migrate-state
+
+# 또는 reconfigure
+terraform init -reconfigure
+```
+
 ### Terraform Init 실패
 
 **증상:**

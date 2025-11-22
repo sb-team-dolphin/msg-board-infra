@@ -10,6 +10,41 @@
 - **ACM Certificate**: SSL 인증서 (커스텀 도메인 사용 시)
 - **Route53 Record**: DNS 레코드 (커스텀 도메인 사용 시)
 
+## 사전 준비
+
+### State 저장소 설정 (팀 협업 시 필수)
+
+루트 디렉토리의 스크립트 또는 terraform-bootstrap을 사용하세요:
+
+**방법 A: 스크립트**
+```bash
+# 상위 디렉토리에서 실행
+cd ..
+./scripts/setup-terraform-backend.sh myapp ap-northeast-2
+```
+
+**방법 B: Terraform Bootstrap**
+```bash
+cd ../terraform-bootstrap
+terraform init && terraform apply
+```
+
+### provider.tf에 Backend 설정 추가
+
+설정 후 `provider.tf`에 다음을 추가:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "myapp-terraform-state"
+    key            = "frontend/terraform.tfstate"
+    region         = "ap-northeast-2"
+    encrypt        = true
+    dynamodb_table = "myapp-terraform-lock"
+  }
+}
+```
+
 ## 사용 방법
 
 ### 1. 변수 설정

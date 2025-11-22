@@ -22,51 +22,36 @@ terraform/
 
 ## 사전 준비
 
-### 1. S3 버킷 생성 (Terraform State 저장용)
+### State 저장소 설정 (팀 협업 시 필수)
 
+루트 디렉토리의 스크립트 또는 terraform-bootstrap을 사용하세요:
+
+**방법 A: 스크립트**
 ```bash
-# S3 버킷 생성
-aws s3 mb s3://myapp-terraform-state-YOUR_NAME --region ap-northeast-2
-
-# 버전 관리 활성화
-aws s3api put-bucket-versioning \
-  --bucket myapp-terraform-state-YOUR_NAME \
-  --versioning-configuration Status=Enabled
-
-# 암호화 활성화
-aws s3api put-bucket-encryption \
-  --bucket myapp-terraform-state-YOUR_NAME \
-  --server-side-encryption-configuration '{
-    "Rules": [{
-      "ApplyServerSideEncryptionByDefault": {
-        "SSEAlgorithm": "AES256"
-      }
-    }]
-  }'
+# 상위 디렉토리에서 실행
+cd ..
+./scripts/setup-terraform-backend.sh myapp ap-northeast-2
 ```
 
-### 2. DynamoDB 테이블 생성 (State Lock용)
-
+**방법 B: Terraform Bootstrap**
 ```bash
-aws dynamodb create-table \
-  --table-name terraform-lock \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-  --region ap-northeast-2
+cd ../terraform-bootstrap
+terraform init && terraform apply
 ```
 
-### 3. provider.tf 수정
+### provider.tf에 Backend 설정 추가
 
-`provider.tf` 파일에서 S3 버킷 이름을 수정하세요:
+설정 후 `provider.tf`에 다음을 추가:
 
 ```hcl
-backend "s3" {
-  bucket         = "myapp-terraform-state-YOUR_NAME"  # 실제 버킷 이름으로 변경
-  key            = "prod/terraform.tfstate"
-  region         = "ap-northeast-2"
-  encrypt        = true
-  dynamodb_table = "terraform-lock"
+terraform {
+  backend "s3" {
+    bucket         = "myapp-terraform-state"
+    key            = "backend/terraform.tfstate"
+    region         = "ap-northeast-2"
+    encrypt        = true
+    dynamodb_table = "myapp-terraform-lock"
+  }
 }
 ```
 

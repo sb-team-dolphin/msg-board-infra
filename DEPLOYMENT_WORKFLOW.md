@@ -8,6 +8,21 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│                    0. 사전 설정 (최초 1회)                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  terraform-bootstrap (또는 스크립트)                         │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌─────────────┐     ┌─────────────┐                       │
+│  │ S3 Bucket   │     │ DynamoDB    │                       │
+│  │ (State)     │     │ (Lock)      │                       │
+│  └─────────────┘     └─────────────┘                       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────┐
 │                    1. 인프라 구축 (1회)                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
@@ -63,6 +78,61 @@
 │  └─────────────────────────────────────────────┘           │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 0단계: 사전 설정 (최초 1회)
+
+Terraform State 저장소 설정 (팀 협업 시 필수):
+
+### 방법 A: 스크립트 사용
+
+```bash
+# Linux/Mac
+./scripts/setup-terraform-backend.sh myapp ap-northeast-2
+
+# Windows
+scripts\setup-terraform-backend.bat myapp ap-northeast-2
+```
+
+### 방법 B: Terraform 사용
+
+```bash
+cd terraform-bootstrap
+terraform init
+terraform apply
+
+# 출력된 backend 설정 확인
+terraform output backend_config
+```
+
+### Backend 설정 적용
+
+출력된 설정을 각 provider.tf에 추가:
+
+```hcl
+# terraform-backend/provider.tf
+terraform {
+  backend "s3" {
+    bucket         = "myapp-terraform-state"
+    key            = "backend/terraform.tfstate"
+    region         = "ap-northeast-2"
+    encrypt        = true
+    dynamodb_table = "myapp-terraform-lock"
+  }
+}
+
+# terraform-frontend/provider.tf
+terraform {
+  backend "s3" {
+    bucket         = "myapp-terraform-state"
+    key            = "frontend/terraform.tfstate"
+    region         = "ap-northeast-2"
+    encrypt        = true
+    dynamodb_table = "myapp-terraform-lock"
+  }
+}
 ```
 
 ---
