@@ -1,13 +1,15 @@
 # CodeDeploy Application for Backend
+# 이름 형식: AppECS-{cluster}-{service} (aws-actions/amazon-ecs-deploy-task-definition 호환)
 resource "aws_codedeploy_app" "backend" {
   compute_platform = "ECS"
-  name             = "${var.project_name}-backend"
+  name             = "AppECS-${var.ecs_cluster_name}-${var.backend_service_name}"
 }
 
 # CodeDeploy Deployment Group for Backend
+# 이름 형식: DgpECS-{cluster}-{service} (aws-actions/amazon-ecs-deploy-task-definition 호환)
 resource "aws_codedeploy_deployment_group" "backend" {
   app_name               = aws_codedeploy_app.backend.name
-  deployment_group_name  = "${var.project_name}-backend-dg"
+  deployment_group_name  = "DgpECS-${var.ecs_cluster_name}-${var.backend_service_name}"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
   service_role_arn       = var.codedeploy_role_arn
 
